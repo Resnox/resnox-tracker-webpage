@@ -3,26 +3,7 @@ const iconFolder = "icons/";
 const itemsFolder = iconFolder + "items/";
 const sizeIcons = 24;
 
-var parts = window.location.search.substr(1).split("&");
-var $_GET = {};
-
-for (var i = 0; i < parts.length; i++)
-{
-    var temp = parts[i].split("=");
-    $_GET[decodeURIComponent(temp[0])] = decodeURIComponent(temp[1]);
-}
-
-let socket = io("https://zootr-tracker-online.herokuapp.com:443");
-
-const receiveItemAdress = "receiveData.php";
-const receiveHintAdress = "receiveState.php";
-const sendItemAdress = "sendData.php";
-const sendHintAdress = "sendState.php";
-
-let keySanity = true;
-let rescueOne = true;
-let startMemberCard = false;
-let fewerTunics = false;
+let takeNonLogicChecks = false;
 
 class Item
 {
@@ -214,6 +195,7 @@ class Zone
 		this._zoneId = zoneId;
 		this._ageRequiered = 0;
 		this._zoneHint = 0;
+		this._canHaveHint = true;
 		this._checks = [];
 		this._displayed = false;
 		this._enteringZoneLogic = function () {
@@ -222,6 +204,12 @@ class Zone
 
 		group.RegisterZone(this);
         allZones[this._zoneId] = this;
+	}
+
+	SetCanHaveHint(canHaveHint)
+	{
+		this._canHaveHint = canHaveHint;
+		return this;
 	}
 
 	//0 = None
@@ -318,46 +306,52 @@ class Zone
 			this._html_title_badge.setAttribute('style', 'width:75%;');
 			$(this._html_title_badge).html(this._zoneName + " (" + this._checks.length + ")");
 
-			this._html_title_button = document.createElement("button");
-			this._html_title_button.setAttribute('class', 'btn btn-sm btn-secondary float-left');
-			this._html_title_button.setAttribute('type', "button");
-
-			this._html_title_icon = document.createElement('img');
-			this._html_title_icon.setAttribute('class', 'float-right');
-			if(this._zoneHint === 0)
-			{
-				this._html_title_badge.setAttribute('class', 'badge badge-light');
-				this._html_title_icon.setAttribute('src', iconFolder + 'normal.png');
-				$(this._html_title_button).html('<img src="icons/normal.png"> Nothing Special in this Area');
-			}
-			else if(this._zoneHint === 1)
-			{
-				this._html_title_badge.setAttribute('class', 'badge badge-success');
-				this._html_title_icon.setAttribute('src', iconFolder + 'woth.png');
-				$(this._html_title_button).html('<img src="icons/woth.png"> WOTH Area');
-			}
-			else if(this._zoneHint === 2)
-			{
-				this._html_title_badge.setAttribute('class', 'badge badge-danger');
-				this._html_title_icon.setAttribute('src', iconFolder + 'barren.png');
-				$(this._html_title_button).html('<img src="icons/barren.png"> Barren Area');
-			}
-
 			html_zone.appendChild(html_title);
 			html_title.appendChild(html_title_h5);
 			html_title_h5.appendChild(this._html_title_badge);
-			this._html_title_badge.appendChild(this._html_title_icon);
+
+			if(this._canHaveHint) {
+				this._html_title_button = document.createElement("button");
+				this._html_title_button.setAttribute('class', 'btn btn-sm btn-secondary float-left');
+				this._html_title_button.setAttribute('type', "button");
+			}
+
+			this._html_title_icon = document.createElement('img');
+			this._html_title_icon.setAttribute('class', 'float-right');
+			if (this._zoneHint === 0) {
+				this._html_title_badge.setAttribute('class', 'badge badge-light');
+				if(this._canHaveHint)
+					this._html_title_icon.setAttribute('src', iconFolder + 'normal.png');
+				$(this._html_title_button).html('<img src="icons/normal.png"> Nothing Special in this Area');
+			} else if (this._zoneHint === 1) {
+				this._html_title_badge.setAttribute('class', 'badge badge-success');
+
+				if(this._canHaveHint)
+					this._html_title_icon.setAttribute('src', iconFolder + 'woth.png');
+				$(this._html_title_button).html('<img src="icons/woth.png"> WOTH Area');
+			} else if (this._zoneHint === 2) {
+				this._html_title_badge.setAttribute('class', 'badge badge-danger');
+
+				if(this._canHaveHint)
+					this._html_title_icon.setAttribute('src', iconFolder + 'barren.png');
+				$(this._html_title_button).html('<img src="icons/barren.png"> Barren Area');
+			}
+
+			if(this._canHaveHint)
+				this._html_title_badge.appendChild(this._html_title_icon);
+
             let currentZone = this;
 
-            this._html_title_button.onclick = function()
-            {
-                let zoneState = (currentZone._zoneHint + 1) % 3;
-                currentZone.SetZoneHint(zoneState);
+			if(this._canHaveHint) {
+				this._html_title_button.onclick = function () {
+					let zoneState = (currentZone._zoneHint + 1) % 3;
+					currentZone.SetZoneHint(zoneState);
 
-                SyncZoneState(currentZone._zoneId, zoneState);
-            };
+					SyncZoneState(currentZone._zoneId, zoneState);
+				};
 
-            this._html_checkList.appendChild(this._html_title_button);
+				this._html_checkList.appendChild(this._html_title_button);
+			}
 
 			for(let e of this._checks)
 			{
@@ -578,11 +572,11 @@ class Check
 				}
 				this._html_checkImage.classList.toggle('item-display-normal', !isHint);
 				this._html_checkImage.classList.toggle('item-display-hint', isHint);
+				this._html_checkImage.classList.toggle('item-display-nologic', !this._states.logic && !isHint);
 				this._html_button.classList.toggle('btn-success', !isHint);
 				this._html_button.classList.toggle('btn-secondary', isHint);
 				this._html_buttonIcon.classList.toggle('fa-check', !isHint);
 				this._html_buttonIcon.classList.toggle('fa-info', isHint);
-				this._html_checkImage.classList.toggle('item-display-nologic', !this._states.logic && !isHint);
 			}
 		}
 
@@ -597,7 +591,11 @@ class Check
 
 	RecalculateLogic()
 	{
+		takeNonLogicChecks = false;
         let inLogic = this._linkedZone._enteringZoneLogic() && this._validateFunction();
+
+        takeNonLogicChecks = true;
+        let isAccessible = this._linkedZone._enteringZoneLogic() && this._validateFunction();
 
 		if(inLogic !== this._states.logic) {
 			this._states.logic = inLogic;
@@ -608,12 +606,16 @@ class Check
 				if (inLogic) {
 					this._html_title_logic.setAttribute('class', 'far fa-check-circle float-right');
 					this._html_title_logic.style.color = "#24ba1f";
-				} else {
+				}
+				else {
 					this._html_title_logic.setAttribute('class', 'far fa-times-circle float-right');
 					this._html_title_logic.style.color = "#ef2d2d";
 				}
-				this._html_checkImage.classList.toggle('item-display-nologic', !inLogic && !this._states.hint)
 			}
+		}
+		if (this._displayed) {
+			this._html_checkImage.classList.toggle('item-display-nologic', !inLogic && !isAccessible && !this._states.hint);
+			this._html_checkImage.classList.toggle('item-display-accessible', !inLogic && isAccessible && !this._states.hint);
 		}
 		return this;
 	}
@@ -625,11 +627,11 @@ class Check
 	SetLockedState(locked, lockState)
 	{
 		if(locked !== this._locked) {
-			this._basic_lock = locked;
+			this._locked = locked;
 
 			if (this._displayed) {
 				this._html_button.toggleAttribute('disabled', locked === 1 || locked === 3);
-				this._html_select.toggleAttribute('disabled', locked >= 2);
+				this._html_select.toggleAttribute('disabled', locked === 2);
 			}
 		}
 
@@ -670,7 +672,6 @@ class Check
 				if(refreshSelect)
 					$(this._html_select).selectpicker('val', item._id.toString());
 				this._html_checkImage.setAttribute('src', itemsFolder + item._itemImage + '.png')
-				this._html_checkImage.classList.toggle('item-display-nologic', !this._states.logic && !this._states.hint);
 			}
 
 			if (this._item === item_UnknownItem) {
@@ -736,7 +737,7 @@ class Check
 			this._html_select.setAttribute('data-live-search', 'true');
 			this._html_select.setAttribute('data-width', '100%');
 			this._html_select.setAttribute('data-hide-disabled', 'true');
-			this._html_select.toggleAttribute('disabled', this._locked >= 2);
+			this._html_select.toggleAttribute('disabled', this._locked === 2);
 
 			this._html_listElement.appendChild(this._html_select);
 
@@ -814,7 +815,7 @@ class Check
 				let item = allItems.get(itemId);
 				currentCheck.SetItem(item, false, false);
 
-				SyncItemOfCheck(currentCheck._checkId, item._id.toString());
+				SyncItemOfCheck(currentCheck._checkId, item._id);
 			});
 
 			this._html_button.onclick = function()
@@ -867,6 +868,21 @@ class Check
 	}
 }
 
+class CheckStat extends Check
+{
+	constructor(checkId, checkName, linkedZone, validateFunction)
+	{
+		super(checkId, checkName, linkedZone);
+		this._itemValidateFunction = validateFunction;
+		this.SetLockedState(3);
+	}
+
+	ValidatingFunction(i)
+	{
+		return this._itemValidateFunction(i);
+	}
+}
+
 function RefreshAllLogic()
 {
     for (let check of allChecks.values()) {
@@ -892,7 +908,7 @@ function IsCheckInLogic(check)
 function DoesHaveThoseItems(items)
 {
     let itemsGot = [...checkProperties.values()].filter(function (check) {
-    	return !check.state.hint && check.state.logic && check.item !== item_UnknownItem;
+    	return !check.state.hint && (check.state.logic || takeNonLogicChecks) && check.item !== item_UnknownItem;
 	}).map(check => check.item);
 	let itemsToVerify = [...items];
 
@@ -921,7 +937,7 @@ function DoesHaveThoseItems(items)
 function DoesHaveAnyOfThoseItems(items)
 {
     let itemsGot = [...checkProperties.values()].filter(function (check) {
-        return !check.state.hint && check.state.logic && check.item !== item_UnknownItem;
+        return !check.state.hint && (check.state.logic || takeNonLogicChecks) && check.item !== item_UnknownItem;
     }).map(check => check.item);
     let itemsToVerify = [...items];
 
@@ -1060,7 +1076,7 @@ const song_Sun = new Song(13, "Sun Song", "eponasong").SetCategory("Tool Song");
 const song_Time = new Song(14, "Time Song", "timesong").SetCategory("Tool Song");
 const song_Storm = new Song(15, "Storm Song", "stormsong").SetCategory("Tool Song");
 
-const song_Scarecrow = new Song(139, "Scarecrow Song", "scarecrowsong").SetCategory("Tool Song");
+const song_Scarecrow = new Song(139, "Scarecrow Song", "scarecrowsong", "Disable").SetCategory("Tool Song");
 
 //Songs (Teleport)
 const song_Minuet = new Song(16, "Minuet of Forest", "minuet").SetCategory("Teleport Song");
@@ -1071,7 +1087,7 @@ const song_Requiem = new Song(20, "Requiem of Spirit", "requiem").SetCategory("T
 const song_Prelude = new Song(21, "Prelude of Light", "prelude").SetCategory("Teleport Song");
 
 //Miscellaneous
-const item_Beans = new Item(22, "Magic Beans", "beans").SetCategory("Miscellaneous");
+const item_Beans = new Item(22, "Magic Beans", "beans", "Disable").SetCategory("Miscellaneous");
 const item_SoA = new Item(23, "Stone of Agony", "stoneagony").SetCategory("Miscellaneous").SetUnique();
 const item_IceTrap = new Item(24, "Ice Trap", "icetrap").SetCategory("Miscellaneous");
 const item_MemberCard = new Item(140, "Gerudo Membership Card", "membercard").SetCategory("Miscellaneous");
@@ -1225,6 +1241,8 @@ const group_Castle = new ZoneGroup("#999999", "#666666");
 const group_Lake = new ZoneGroup("#437ce8", "#1f4da5");
 const group_Kakariko = new ZoneGroup("#e386e8", "#a851ad");
 const group_Desert = new ZoneGroup("#eab95d", "#a87d2b");
+const group_Current = new ZoneGroup("#6c5565", "#3d273b");
+
 
 //=====ZONES=====
 //Forest
@@ -1265,6 +1283,8 @@ const zone_Fortress = new Zone(group_Desert, "Gerudo Fortress", "fortress");
 const zone_Wasteland = new Zone(group_Desert, "Haunted Wasteland", "wasteland");
 const zone_Colossus = new Zone(group_Desert, "Desert Colossus", "colossus");
 
+const zone_CurrentStat = new Zone(group_Current, "Currents Items", "currentItems").SetCanHaveHint(false);
+
 //=====DUNGEONS=====
 //Dungeons (Child)
 const dun_Deku = new Dungeon(group_Forest, "Deku Tree", "deku").SetKeyRequired(0);
@@ -1276,7 +1296,7 @@ const dun_Jabu = new Dungeon(group_Zora, "Jabu-Jabu Cavern", "jabu").SetKeyRequi
             || DoesHaveThoseItems([item_Scale1])))});
 
 //Optionnals
-const dun_IceCavern = new Dungeon(group_Zora, "Ice Cavern", "ice-cavern").SetKeyRequired(0).SetAgeRequired(2)
+const dun_IceCavern = new Dungeon(group_Zora, "Ice Cavern", "iceCavern").SetKeyRequired(0).SetAgeRequired(2)
     .SetEnteringZoneLogic(function () { return DoesHaveThoseItems([item_RutoLetter, song_Zelda])
     && DoesHaveAnyOfThoseItems([item_BombBag1, item_Scale1]);});
 const dun_BotW = new Dungeon(group_Kakariko, "Bottom of the Well", "botw").SetKeyRequired(3).SetAgeRequired(1)
@@ -1312,7 +1332,7 @@ const dun_Spirit = new Dungeon(group_Desert, "Spirit Temple", "spirit").SetKeyRe
 
 //Final Dungeon
 const dun_Ganon = new Dungeon(group_Castle, "Ganon's Castle", "ganon").SetKeyRequired(2).SetAgeRequired(2).SetBossKeyRequired()
-    .SetEnteringZoneLogic(function () { SubLogic_GanonCastleAccess();});
+    .SetEnteringZoneLogic(function () { return SubLogic_GanonCastleAccess();});
 
 //Dungeons Items
 const item_keyForest = new ItemKey(123, "Key (Forest)", "keyforest", dun_Forest).SetCategory("Dungeon Stuff");
@@ -1334,19 +1354,27 @@ const item_bosskeyGanon = new ItemBossKey(136, "Boss Key (Ganon)", "bosskeyganon
 const item_map = new Item(137, "Map", "map", 'Dungeons').SetCategory("Dungeon Stuff");
 const item_compass = new Item(138, "Compass", "compass", 'Dungeons').SetCategory("Dungeon Stuff");
 
-//=====CATEGORY AV. TYPE=====
-const av_items = 'Items';
-const av_songs = 'Songs';
-const av_stones = 'Stones';
-const av_skull = 'Skulltulas';
-
 //=====CHECKS=====
 //Forest
+const check_Current_Scarecrow = new CheckStat("currentScarecrow", "Current Scarecrow", zone_CurrentStat, function (i) {
+	return i === item_UnknownItem || i === song_Scarecrow;
+});
+const check_Current_Bean = new CheckStat("currentBean", "Current Bean", zone_CurrentStat, function (i) {
+	return i === item_UnknownItem || i === item_Beans;
+});
+const check_Current_Mask = new CheckStat("currentMask", "Current Mask Quest", zone_CurrentStat, function (i) {
+	return i === item_UnknownItem || i._category === item_Mask1._category;
+});
+	const check_Current_BGS = new CheckStat("currentBGS", "Current BGS Quest", zone_CurrentStat, function (i) {
+	return i === item_UnknownItem || i._category === item_BGS1._category;
+});
+
+//Forest
 const check_KokiriSword = new Check("kokiriSword", "Kokiri Sword", zone_KokiriForest);
-const check_Mido1 = new Check("kokiriMido1", "Mido's House (Top Left)", zone_KokiriForest);
-const check_Mido2 = new Check("kokiriMido2", "Mido's House (Top Right)", zone_KokiriForest);
-const check_Mido3= new Check("kokiriMido3", "Mido's House (Bottom Left)", zone_KokiriForest);
-const check_Mido4 = new Check("kokiriMido4", "Mido's House (Bottom Right)", zone_KokiriForest);
+const check_KokiriMido1 = new Check("kokiriMido1", "Mido's House (Top Left)", zone_KokiriForest);
+const check_KokiriMido2 = new Check("kokiriMido2", "Mido's House (Top Right)", zone_KokiriForest);
+const check_KokiriMido3= new Check("kokiriMido3", "Mido's House (Bottom Left)", zone_KokiriForest);
+const check_KokiriMido4 = new Check("kokiriMido4", "Mido's House (Bottom Right)", zone_KokiriForest);
     const check_KokiriSoS = new Check("kokiriSoS", "SoS Grotto", zone_KokiriForest)
     .SetLogicValidator(function() { return DoesHaveThoseItems([song_Storm]); });
 
@@ -1441,22 +1469,6 @@ const check_DMTBiggoron = new Check("dmtBiggoron", "Biggoron", zone_DMT)
         (DoesHaveThoseItems([item_BGS8]) && IsCheckInLogic(check_ZDKZ))
         || DoesHaveThoseItems([item_BGS11])});
 
-const check_GCDarunia = new Check("gcDarunia", "Darunia", zone_GC)
-    .SetLogicValidator(function() { return DoesHaveThoseItems([song_Zelda, song_Saria]); });
-const check_GCPot = new Check("gcPot", "Spining Pot", zone_GC)
-    .SetLogicValidator(function() { return DoesHaveAnyOfThoseItems([song_Zelda, item_Din])
-        && DoesHaveAnyOfThoseItems([item_Strength1, item_BombBag1]); });
-const check_GCHotRod = new Check("gcHotRod", "Hot Rod Goron", zone_GC)
-    .SetLogicValidator(function() { return DoesHaveThoseItems([item_BombBag1]); });
-const check_GCLink = new Check("gcLink", "Link the Goron", zone_GC)
-    .SetLogicValidator(function() { return DoesHaveAnyOfThoseItems([item_BombBag1, item_Strength1, item_Bow1]); });
-const check_GCBoulderL = new Check("gcBoulderL", "Boulder Maze (Bomb Way Left)", zone_GC)
-    .SetLogicValidator(function() { return DoesHaveAnyOfThoseItems([item_BombBag1, item_Hammer, item_Strength2]); });
-const check_GCBoulderR = new Check("gcBoulderR", "Boulder Maze (Bomb Way Right)", zone_GC)
-    .SetLogicValidator(function() { return DoesHaveAnyOfThoseItems([item_BombBag1, item_Hammer, item_Strength2]); });
-const check_GCBoulderH = new Check("gcBoulderH", "Boulder Maze (Strength/Hammer)", zone_GC)
-    .SetLogicValidator(function() { return DoesHaveAnyOfThoseItems([item_Hammer, item_Strength2]); });
-
 const check_DMCWall = new Check("dmcWall", "Wall Heart", zone_DMC)
     .SetLogicValidator(function() { return DoesHaveAnyOfThoseItems([item_Strength1, item_BombBag1, item_Bow1])
         || (DoesHaveThoseItems([song_Bolero]) && DoesHaveAnyOfThoseItems([item_HoverBoots, item_Hookshot, item_Beans])); });
@@ -1474,6 +1486,22 @@ const check_DMCBolero = new Check("dmcBolero", "Bolero of Fire", zone_DMC).SetCh
             || (DoesHaveAnyOfThoseItems([item_Strength1, item_BombBag1, item_Bow1]) && DoesHaveAnyOfThoseItems([item_HoverBoots, item_Hookshot]))
             || (DoesHaveAnyOfThoseItems([item_BombBag1, item_Hammer]) && (DoesHaveAnyOfThoseItems([item_Longshot, song_Scarecrow]) || DoesHaveThoseItems([item_HoverBoots])))
     });
+
+const check_GCDarunia = new Check("gcDarunia", "Darunia", zone_GC)
+	.SetLogicValidator(function() { return DoesHaveThoseItems([song_Zelda, song_Saria]); });
+const check_GCPot = new Check("gcPot", "Spining Pot", zone_GC)
+	.SetLogicValidator(function() { return DoesHaveAnyOfThoseItems([song_Zelda, item_Din])
+		&& DoesHaveAnyOfThoseItems([item_Strength1, item_BombBag1]); });
+const check_GCHotRod = new Check("gcHotRod", "Hot Rod Goron", zone_GC)
+	.SetLogicValidator(function() { return DoesHaveThoseItems([item_BombBag1]); });
+const check_GCLink = new Check("gcLink", "Link the Goron", zone_GC)
+	.SetLogicValidator(function() { return DoesHaveAnyOfThoseItems([item_BombBag1, item_Strength1, item_Bow1]); });
+const check_GCBoulderL = new Check("gcBoulderL", "Boulder Maze (Bomb Way Left)", zone_GC)
+	.SetLogicValidator(function() { return DoesHaveAnyOfThoseItems([item_BombBag1, item_Hammer, item_Strength2]); });
+const check_GCBoulderR = new Check("gcBoulderR", "Boulder Maze (Bomb Way Right)", zone_GC)
+	.SetLogicValidator(function() { return DoesHaveAnyOfThoseItems([item_BombBag1, item_Hammer, item_Strength2]); });
+const check_GCBoulderH = new Check("gcBoulderH", "Boulder Maze (Strength/Hammer)", zone_GC)
+	.SetLogicValidator(function() { return DoesHaveAnyOfThoseItems([item_Hammer, item_Strength2]); });
 
 const check_DCMap = new Check("dcMap", "Map", dun_DC);
 const check_DCCompass = new Check("dcCompass", "Compass", dun_DC);
@@ -1845,7 +1873,8 @@ const check_ValleyWaterfall = new Check("valleyWaterfall", "Waterfall Heart", zo
 const check_ValleyHammer = new Check("valleyHammer", "Hammer Chest", zone_Valley)
     .SetLogicValidator(function() { return DoesHaveThoseItems([item_Hammer]) && SubLogic_GerudoFortressAccess(); });
 
-const check_FortressGMC = new Check("fortressGMC", "Gerudo Membership Card", zone_Fortress).SetItem(item_MemberCard, true).SetLockedState(2, true).SetHintState(true, true);
+const check_FortressGMC = new Check("fortressGMC", "Gerudo Membership Card", zone_Fortress).SetItem(item_MemberCard, true).SetLockedState(2, true).SetHintState(true, true)
+	.SetLogicValidator(function() { return SubLogic_GerudoFortressAccess(); });
 const check_FortressRoof = new Check("fortressRoof", "Rooftop Chest", zone_Fortress)
     .SetLogicValidator(function() { return SubLogic_GerudoFortressAccess()
         && (DoesHaveAnyOfThoseItems([item_Hookshot, song_Scarecrow])
@@ -1854,6 +1883,26 @@ const check_FortressArchery10 = new Check("fortressArchery10", "Archery (1000pts
     .SetLogicValidator(function() { return DoesHaveThoseItems([song_Epona, item_Bow1]); });
 const check_FortressArchery15 = new Check("fortressArchery15", "Archery (1500pts)", zone_Fortress)
     .SetLogicValidator(function() { return DoesHaveThoseItems([song_Epona, item_Bow1]); });
+
+const check_WastelandTorches = new Check("wastelandTorches", "Light the Torches", zone_Wasteland)
+	.SetLogicValidator(function() { return SubLogic_GerudoFortressAccess()
+		&& DoesHaveAnyOfThoseItems([item_Longshot, item_HoverBoots])
+		&& (DoesHaveThoseItems([item_Din]
+			|| DoesHaveThoseItems([item_Bow1, item_FireArrow]))); });
+
+const check_ColossusFairy = new Check("colossusFairy", "Nayru's Love Fairy", zone_Colossus)
+	.SetLogicValidator(function() { return DoesHaveThoseItems([song_Zelda, item_BombBag1])
+		&&  (DoesHaveThoseItems([song_Requiem])
+			|| (SubLogic_GerudoFortressAccess()
+				&& SubLogic_LensOfTruth()
+				&& DoesHaveAnyOfThoseItems([item_Longshot, item_HoverBoots]))); });
+const check_ColossusArch = new Check("colossusArch", "Arch Heart", zone_Colossus)
+	.SetLogicValidator(function() { return DoesHaveThoseItems([item_Beans, song_Requiem]); });
+const check_ColossusRequiem = new Check("colossusRequiem", "Requiem of Spirit", zone_Colossus).SetCheckType(1)
+	.SetLogicValidator(function() { return DoesHaveThoseItems([song_Requiem])
+		|| (SubLogic_GerudoFortressAccess()
+			&& SubLogic_LensOfTruth()
+			&& DoesHaveAnyOfThoseItems([item_Longshot, item_HoverBoots])); });
 
 const check_GTGLobby1 = new Check("gtgLobby1", "Lobby Eye Switch 1", dun_GTG)
     .SetLogicValidator(function() { return DoesHaveThoseItems([item_Bow1]); });
@@ -1904,26 +1953,6 @@ const check_GTGLeft3 = new Check("gtgLeft3", "Maze Left #3", dun_GTG)
     .SetLogicValidator(function() { return DoesHaveThoseItems([item_keyGTG, item_keyGTG, item_keyGTG, item_keyGTG, item_keyGTG, item_keyGTG, item_keyGTG]); });
 const check_GTGIce = new Check("gtgIce", "Ice Arrows", dun_GTG)
     .SetLogicValidator(function() { return DoesHaveThoseItems([item_keyGTG, item_keyGTG, item_keyGTG, item_keyGTG, item_keyGTG, item_keyGTG, item_keyGTG, item_keyGTG, item_keyGTG]); });
-
-const check_WastelandTorches = new Check("wastelandTorches", "Light the Torches", zone_Wasteland)
-    .SetLogicValidator(function() { return SubLogic_GerudoFortressAccess()
-        && DoesHaveAnyOfThoseItems([item_Longshot, item_HoverBoots])
-        && (DoesHaveThoseItems([item_Din]
-        || DoesHaveThoseItems([item_Bow1, item_FireArrow]))); });
-
-const check_ColossusFairy = new Check("colossusFairy", "Nayru's Love Fairy", zone_Colossus)
-    .SetLogicValidator(function() { return DoesHaveThoseItems([song_Zelda, item_BombBag1])
-        &&  (DoesHaveThoseItems([song_Requiem])
-        || (SubLogic_GerudoFortressAccess()
-            && SubLogic_LensOfTruth()
-            && DoesHaveAnyOfThoseItems([item_Longshot, item_HoverBoots]))); });
-const check_ColossusArch = new Check("colossusArch", "Arch Heart", zone_Colossus)
-    .SetLogicValidator(function() { return DoesHaveThoseItems([item_Beans, song_Requiem]); });
-const check_ColossusRequiem = new Check("colossusRequiem", "Requiem of Spirit", zone_Colossus).SetCheckType(1)
-    .SetLogicValidator(function() { return DoesHaveThoseItems([song_Requiem])
-        || (SubLogic_GerudoFortressAccess()
-            && SubLogic_LensOfTruth()
-            && DoesHaveAnyOfThoseItems([item_Longshot, item_HoverBoots])); });
 
 const check_SpiritChild1 = new Check("spiritChild1", "Child-Only (Left)", dun_Spirit)
     .SetLogicValidator(function() { return DoesHaveAnyOfThoseItems([item_Boomerang, item_Slingshot1, item_Bombchus]); });
@@ -1995,129 +2024,3 @@ const check_SpiritTwinrova = new Check("spiritTwinrova", "Twinrova", dun_Spirit)
     .SetLogicValidator(function () { return DoesHaveThoseItems([item_Hookshot, item_MirrorShield, item_BombBag1, item_Strength2, item_bosskeySpirit, item_keySpirit, item_keySpirit, item_keySpirit, item_keySpirit, item_keySpirit])});
 const check_SpiritStone = new Check("spiritStone", "Stone/Medaillon", dun_Spirit).SetCheckType(2)
     .SetLogicValidator(function () { return DoesHaveThoseItems([item_Hookshot, item_MirrorShield, item_BombBag1, item_Strength2, item_bosskeySpirit, item_keySpirit, item_keySpirit, item_keySpirit, item_keySpirit, item_keySpirit])});
-
-//=====CORE MECHANICS=====
-$(document).ready(function(){
-	allGroupZones.forEach(function(e)
-	{
-		e.SetupDisplay();
-	});
-
-    $('select').selectpicker();
-
-	RefreshAllLogic();
-});
-
-socket.on
-(
-    'item-change-back',
-    function(data)
-    {
-        allChecks.get(data['checkid']).SetItem(allItems.get(data['itemid']));
-    }
-)
-
-socket.on
-(
-    'zone-change-back',
-    function(data)
-    {
-        allZones[data['zoneid']].SetZoneHint(data['state']);
-    }
-)
-
-socket.on
-(
-    'hint-change-back',
-    function(data)
-    {
-        allChecks.get(data['checkid']).SetHintState(data['hintstate']);
-    }
-)
-
-function SyncHintOfCheck(checkid, hintstate)
-{
-    /*jQuery.ajax
-    ({
-        type: "POST",
-        url: sendHintAdress,
-        data: {	'trackerID' : $_GET['trackerID'],
-            'checkid' : checkid,
-            'hintstate': hintstate}
-    });*/
-
-    socket.emit(
-        'hint-change',
-        {
-            'checkid' : checkid,
-            'hintstate': hintstate
-        }
-    );
-}
-
-function SyncZoneState(zoneid, state)
-{
-    /*jQuery.ajax
-    ({
-        type: "POST",
-        url: sendZoneAdress,
-        data: {	'trackerID' : $_GET['trackerID'],
-            'zoneid' : zoneid,
-            'state': state}
-    });*/
-
-    socket.emit(
-        'zone-change',
-        {
-            "zoneid" : zoneid,
-            "state" : state
-        }
-    );
-}
-
-function SyncItemOfCheck(checkid, itemid)
-{
-    /*jQuery.ajax
-    ({
-        type: "POST",
-        url: sendItemAdress,
-        data: {	'trackerID' : $_GET['trackerID'],
-            'checkid' : checkid,
-            'itemid': itemid}
-    });*/
-
-    socket.emit(
-        'item-change',
-        {
-            "checkid" : checkid,
-            "itemid" : itemid
-        }
-    );
-}
-
-function LoadInformation()
-{
-    jQuery.ajax
-    ({
-        type: "POST",
-        url: receiveItemAdress,
-        dataType: 'json',
-        data: {'trackerID' : $_GET['trackerID']},
-        success: function (obj)
-        {
-            SetData(obj[0]);
-
-            jQuery.ajax
-            ({
-                type: "POST",
-                url: receiveStateAdress,
-                dataType: 'json',
-                data: {'trackerID' : $_GET['trackerID']},
-                success: function (obj)
-                {
-                    SetInfoData(obj[0]);
-                }
-            });
-        }
-    });
-}

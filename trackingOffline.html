@@ -5,11 +5,11 @@
       <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 		
 		<link rel="icon" href="favicon.ico"/>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.css">
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
-		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/css/bootstrap-select.min.css">
 		<link href="https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.4.0/css/bootstrap4-toggle.min.css" rel="stylesheet">
-		
+
 		<style>
 		#cardGrid
 		{
@@ -35,15 +35,84 @@
 		{
 			color: #2D3135;
 		}
+		
+		option[aria-disabled=true]
+		{ 
+			/*display: none !important;*/
+		}
+
+		.btn[disabled]
+		{
+			display: none !important;
+		}
+		
+		.item-display-normal
+		{
+			border: 2px ridge #38ac39;
+			background: #6ecb81;
+			margin:1px;
+		}
+			
+		.item-display-hint
+		{
+			border: 2px ridge #777777;
+			background: #bbbbbb;
+			opacity: 0.6;
+			filter: grayscale(80%);
+			margin:1px;
+		}
+
+		.item-display-nologic
+		{
+			border: 2px ridge #b94743;
+			background: #cf8080;
+			margin:1px;
+		}
+
+		.item-display-accessible
+		{
+			border: 2px ridge #c6b900;
+			background: #cfc960;
+			margin:1px;
+		}
+
+		.tooltip-inner {
+			max-width: 600px;
+		}
+
+		.tooltip-icon-items
+		{
+			height: 20px !important;
+			width: 20px !important;
+			filter: contrast(125%);
+		}
+
+		@font-face
+		{
+			font-family: countFont;
+			src: url(itemCount.ttf);
+		}
+
+		#innerTooltipLogic {
+			white-space: nowrap;
+			float:right;
+		}
+
+		.tooltip-inner {
+			white-space: nowrap;
+		 }
+
+		.count-font
+		{ 
+			/*color: #FFFFFF;*/
+			/*text-shadow: -2px -2px 0 #000000, 2px -2px 0 #000000, -2px 2px 0 #000000, 2px 2px 0 #000000;*/
+		}
 		</style>
 		
 		<title>OoT Randomizer Tracker Online</title>
 	</head>
 	<body class="nightmodebody" id="mainBody">
 		<div id="header" class="nightmodetext">
-			<div class="float-right">
-				<button id="nightmodebutton" type="button" class="btn btn-light" onclick="SwitchNightLightMode()"><i id="nightmodeicon" class="fas fa-lightbulb"></i></button>
-			</div>
 			<br>
 			<h1 class="text-center">Welcome to Resnox's Online Map Tracker</h1>
 			<h3 class="text-center">With on realtime sync among users !</h3>
@@ -82,12 +151,14 @@
 									• Global view of Spoiler Logs (not multiworld)<br>
 									• Support of Tokensanity<br>
 									• Support of Shopsanity<br>
-									• Add tracking of Dungeon Keys<br>
-									• Support of Keysanity<br>
 									• Support of Cowsanity<br>
-									• Support for hints and the location of the hint<br>
-									• A better look (yeah it's ugly right now I know)<br>
-									• And more...
+									• And more...<br>
+									<br>
+									The logic in place tell you what's is in logic :<br>
+									► Green : In logic, everything is allright<br>
+									► Yellow : You can be access it (following the logic) according to everything you got (even non-logic stuff)<br>
+									► Red : This is definitivly outside of the logic<br>
+									► Gray : This is an hint.<br>
 								</div>
 							</div>
 
@@ -102,7 +173,7 @@
 			<div id="newsButtonModal">
 				<div class="text-center">
 					<button type="button" style="width:25%" class="btn btn-danger" data-toggle="modal" data-target="#newsModal">
-						v0.4
+						v0.5a
 					</button>
 				</div>
 				<div class="modal" id="newsModal">
@@ -115,16 +186,11 @@
 
 							<div class="modal-body">
 								<div>
-									<b>New features (0.4)</b><br>
-									• You can now generate your own trackerID !<br>
-									• Small Icons show you if the check is Child/Adult only !<br>
-									• Small Icons show you if the check is an Item/Song/Dungeon Stone !<br>
-									<br>
-									<b>Bug Fixes & Minor Changes</b><br>
-									• The item list is being reworked and is not longer available<br>
-									<br>
-									<b>Known Bug</b><br>
-									• If you change the trackerID to an unknown one, the page won't load properly<br>
+									<b>New features (0.5a)</b><br>
+									• There is now logic inside ! You can tell what's is on logic or not and even see the check you have access with you no-logic checks<br>
+									• WOTH / Barren Area !<br>
+									• Keytracking ! You can tell how many key you still need !<br>
+									• Tracking of stuff like, beans, scarecrow and even the trades sequences !
 									<br>
 								</div>
 							</div>
@@ -138,27 +204,36 @@
 			</div>
 		</div>
 		</br>
-		<div id="CreateTrackerID" class="container">
-			<form action="../zeldaTracker/generateTrackerID.php">
-				<button class="btn btn-success" style="width:100%" type="submit">Generate a new trackerID <i class="fas fa-cogs"></i></button>
-			</form>
-		</div>
-		<br>
-		<div id="UseOffline" class="container">
-			<form action="../zeldaTracker/trackingOffline">
-				<button class="btn btn-warning" style="width:100%" type="submit">Use offline <i class="fas fa-unlink"></i></button>
-			</form>
-		</div>
-		<br>
-		<h5><span class="badge badge-dark text-center" style="width:100%">You want a custom trackerID name? Ask me on Discord</span></h5>
-		<img src="icons/discordaccount.png" style="display: block; margin-left: auto; margin-right: auto;">
+		<main style="margin:12px">
+			<div class="container-fluid" id="stream-viewer" style="display:none">
+				<div class="card" style="margin:12px;">
+					<div class="text-center">
+						<h4><span class="badge badge-dark text-center" style="width:75%">Twitch Stream</span></h4>
+					</div>
+					<div class="card d-inline" style="margin:12px; margin-top:0px;" id="twitch-embed">
+					</div>
+				</div>
+			</div>
+
+			<div id="TrackerContent">
+				<div class="container-fluid">
+					<div class="row d-flex flex-wrap" id="cardGrid">
+						
+					</div>
+				</div>
+			</div>
+		</main>
 		
-		<script src="https://code.jquery.com/jquery-3.4.0.min.js" integrity="sha256-BJeo0qm959uMBGb65z40ejJYGSgR7REI4+CW1fNKwOg=" crossorigin="anonymous"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-		<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-		<script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/js/bootstrap-select.min.js"></script>
+		<script src= "https://code.jquery.com/jquery-3.4.0.min.js" integrity="sha256-BJeo0qm959uMBGb65z40ejJYGSgR7REI4+CW1fNKwOg=" crossorigin="anonymous"></script>
+		<script src= "https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+		<script src= "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+		<script src= "https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/js/bootstrap-select.min.js"></script>
 		<script src= "https://player.twitch.tv/js/embed/v1.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
-		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore.js"></script>
+		<script src= "https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
+		<script src= "javascript/getPlugin.js"></script>
+		<script src= "javascript/settingsTracker_Bracket.js"></script>
+		<script src= "javascript/itemsDatabaseLogic.js"></script>
+		<script src= "javascript/offlinePlugin.js"></script>
+		<script src= "javascript/twitchStream.js"></script>
 		</body>
 </html>
