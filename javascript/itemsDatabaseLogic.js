@@ -1368,6 +1368,7 @@ const check_Current_Mask = new CheckStat("currentMask", "Current Mask Quest", zo
 	const check_Current_BGS = new CheckStat("currentBGS", "Current BGS Quest", zone_CurrentStat, function (i) {
 	return i === item_UnknownItem || i._category === item_BGS1._category;
 });
+	const check_Current_Stone = new Check("currentStone", "Starting Medaillon", zone_CurrentStat).SetCheckType(2);
 
 //Forest
 const check_KokiriSword = new Check("kokiriSword", "Kokiri Sword", zone_KokiriForest);
